@@ -24,17 +24,29 @@ function interval(fn, duration){
         clearTimeout(this.timer)
     }
 }
+String.prototype.lpad = function(padString, length) {
+    var str = this;
+    while (str.length < length)
+        str = padString + str;
+    return str;
+}
 
 // colours
 const C_BACKG = '#222';
 const C_FORE = '#ccc';
+const C_EXPENDING = '#e06c75';
 
-var df = 1000/60; // 60 = fps
-var t0 = -1;
-var t = 0; // time in seconds
-var until = 0;
-var int = 10;
+var until = 0; // timestamp (until)
+var int = 5;
 var count = 0;
+var extra = 0;
+
+// var prevExtra = 0;
+var t0 = 0;
+var isExpending = false;
+var expended = 0;
+
+var volume = 100;
 
 var c = document.getElementById('c');
 var cx = c.getContext('2d');
@@ -66,53 +78,112 @@ function getTimestamp(){
 }
 
 function update(){
-    if(t0 <= 0){
-        t0 = getTimestamp();
+    if (getTimestamp() >= until){
+        expend();
+    }
+    if(isExpending){
+        expended = getTimestamp()-t0;
+        // extra -= expended;
+    }
+}
+
+function next(){
+    count += 1;
+    until = getTimestamp() + int;
+}
+
+function expend(){
+    // if(isExpending){
+    //     extra = 0;
+    // }
+    // if(extra <= 0){
+    //     if(prevExtra == 0){
+    //         prevExtra = extra;
+    //         t0 = getTimestamp();
+    //     }
+    //     else{
+    //         extra = prevExtra - (getTimestamp()-t0);
+    //     }
+    // }
+    if(!isExpending){
+    t0 = getTimestamp();
+    beep(volume, 440*2, 1000);
+    until = t0 + extra;
+    isExpending = true;
+    }
+}
+
+function secondsToStr(s) {
+    // past 1h doesn't really work but good enough
+    let temp = s;
+    const years = Math.floor( temp / 31536000 ),
+          days = Math.floor( ( temp %= 31536000 ) / 86400 ),
+          hours = Math.floor( ( temp %= 86400 ) / 3600 ),
+          minutes = Math.floor( ( temp %= 3600 ) / 60 ),
+          seconds = temp % 60;
+
+    if ( days || hours || seconds || minutes ) {
+      return ( years ? years + "y " : "" ) +
+      ( days ? days + "d " : "" ) +
+      ( hours ? hours + ":" : ""  ) +
+      ( minutes ? minutes + ":" : "" ) +
+      (Number.parseFloat( seconds ).toFixed(0)).lpad("0",2) + "";
     }
 
-    if (until <= 0){
-        // beep
-        console.log(t);
-        beep(100, 440*2, 1000);
-
-        count += 1;
-        until = int;
-    }
-    // console.log(t);
-
-    until -= getTimestamp() - t0 - t;
-    t = getTimestamp() - t0;
+    return "00";
 }
 
 function draw(){
     clear();
 
-    // draw circle
+    // sector
     cx.strokeStyle = C_FORE;
     cx.fillStyle = C_FORE;
-    cx.lineWidth = 10;
-
     var x = c.width/2;
     var y = c.height/2-50;
     var r = c.height*0.4;
+
+    if(isExpending){
+        cx.fillStyle = C_EXPENDING;
+    }
+    cx.lineWidth = 0.1;
+    cx.beginPath();
+    cx.moveTo(x, y);
+    if(!isExpending){
+        cx.arc(x,y, r, -Math.PI/2, -Math.PI/2 - 2*Math.PI * (until-getTimestamp())/(int));
+    }else{
+        if(extra > 0){
+            cx.arc(x,y, r, -Math.PI/2, -Math.PI/2 - 2*Math.PI * (until-getTimestamp())/(until-t0));
+        }else{
+            // smh
+        }
+    }
+    cx.fill();
+
+    // draw circle outline
+    cx.strokeStyle = C_FORE;
+    cx.fillStyle = C_FORE;
+    cx.lineWidth = 10;
 
     // circle outline
     cx.beginPath();
     cx.arc(x,y, r, 0, 2*Math.PI);
     cx.stroke();
 
-    // sector
-    cx.lineWidth = 0.1;
-    cx.beginPath();
-    cx.moveTo(x, y);
-    cx.arc(x,y, r, -Math.PI/2, -Math.PI/2 + (t%int)/int*2*Math.PI);
-    cx.fill();
-
     cx.font = "40px Arial";
     cx.textAlign = "center"; 
-    cx.fillText(count, x, y + r + 75);
+    if(!isExpending){
+    cx.fillText("#"+count + " +"+secondsToStr(extra), x, y + r + 75);
+    }
+    else{
+        cx.fillText("#"+count + " +"+(extra + (t0-getTimestamp())), x, y + r + 75);
+    }
 }
 
+function pressed(){
+    extra += until - getTimestamp();
+    next();    
+}
 
 (function () {
     function resizeCanvas() {
@@ -124,12 +195,19 @@ function draw(){
     window.addEventListener('resize', resizeCanvas, false);
     resizeCanvas();
 
+    document.addEventListener("keypress", function(event) {
+        if (event.keyCode == 13 || event.keyCode == 32) {
+            pressed();
+        }
+    })
+
     init();
     function init() {
+        next();
         interval(function(){
             update();
             draw();
-        }, df);
+        }, 1000/60); // 60 fps
         run();
         
     }
