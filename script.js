@@ -29,28 +29,29 @@ function interval(fn, duration){
 const C_BACKG = '#222';
 const C_FORE = '#ccc';
 
-var df = 1000/60; // 60 = fps
-var t0 = -1;
-var t = 0; // time in seconds
 var until = 0;
 var int = 10;
-var count = 0;
+var t0 = -1;
 
 var c = document.getElementById('c');
 var cx = c.getContext('2d');
 
 var a = new AudioContext();
 
-function beep(vol, freq, duration){
+function beep(freq, duration){
     v=a.createOscillator();
     u=a.createGain();
     v.connect(u);
     v.frequency.value=freq;
     v.type="sine";
     u.connect(a.destination);
-    u.gain.value=vol*0.01;
+    u.gain.value=50*0.01;
     v.start(a.currentTime);
     v.stop(a.currentTime+duration*0.001);
+}
+
+function getTimestamp(){
+    return Date.now() / 1000;
 }
 
 function clear() {
@@ -61,27 +62,15 @@ function clear() {
     cx.stroke();
 }
 
-function getTimestamp(){
-    return Date.now() / 1000;
-}
-
 function update(){
     if(t0 <= 0){
         t0 = getTimestamp();
     }
 
-    if (until <= 0){
-        // beep
-        console.log(t);
-        beep(100, 440*2, 1000);
-
-        count += 1;
-        until = int;
+    if (getTimestamp() >= until){
+        beep(440*2, 1000);
+        until = getTimestamp() + int;
     }
-    // console.log(t);
-
-    until -= getTimestamp() - t0 - t;
-    t = getTimestamp() - t0;
 }
 
 function draw(){
@@ -90,27 +79,29 @@ function draw(){
     // draw circle
     cx.strokeStyle = C_FORE;
     cx.fillStyle = C_FORE;
-    cx.lineWidth = 10;
+    cx.lineWidth = 15;
 
     var x = c.width/2;
     var y = c.height/2-50;
     var r = c.height*0.4;
+
+    // sector
+    cx.lineWidth = 0.1;
+    cx.beginPath();
+    cx.moveTo(x, y);
+    cx.arc(x,y, r, -Math.PI/2, -Math.PI/2 - 2*Math.PI * (until-getTimestamp())/(int))
+    cx.fill();
 
     // circle outline
     cx.beginPath();
     cx.arc(x,y, r, 0, 2*Math.PI);
     cx.stroke();
 
-    // sector
-    cx.lineWidth = 0.1;
-    cx.beginPath();
-    cx.moveTo(x, y);
-    cx.arc(x,y, r, -Math.PI/2, -Math.PI/2 + (t%int)/int*2*Math.PI);
-    cx.fill();
-
+    // count
+    count = (getTimestamp()-t0)/int;
     cx.font = "40px Arial";
-    cx.textAlign = "center"; 
-    cx.fillText(count, x, y + r + 75);
+    cx.textAlign = "center";
+    cx.fillText(Number(Math.floor(count*10)/10).toFixed(1), x, y + r + 75);
 }
 
 
@@ -129,8 +120,7 @@ function draw(){
         interval(function(){
             update();
             draw();
-        }, df);
+        }, 1000/60); // 60 fps
         run();
-        
     }
 })();
