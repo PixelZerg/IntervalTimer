@@ -139,25 +139,29 @@ function draw(){
 
 }
 
+function init() {
+    // variable init
+    until = popped = count = q = perc = 0;
+    t0 = -1;
+
+    // marks stuff
+    cum_marks = [];
+    cum = marks[0];
+    for(var i = 1; i <= marks.length; i++){
+        cum_marks.push(cum);
+        cum += marks[i];
+    }
+    cum_marks.unshift(0);
+
+    interval(function(){
+        update();
+        draw();
+    }, 1000/60); // 60 fps
+    run();
+}
 
 (function () {
     init();
-    function init() {
-        // marks stuff
-        cum_marks = [];
-        cum = marks[0];
-        for(var i = 1; i <= marks.length; i++){
-            cum_marks.push(cum);
-            cum += marks[i];
-        }
-        cum_marks.unshift(0);
-
-        interval(function(){
-            update();
-            draw();
-        }, 1000/60); // 60 fps
-        run();
-    }
 
     function resizeCanvas() {
         c.width = window.innerWidth;
