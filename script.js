@@ -1,3 +1,29 @@
+var marks = [3, 4, 1, 2];
+var int = 10;
+
+// colours
+const C_BACKG = '#222';
+const C_FORE = '#ccc';
+
+var until = 0;
+var t0 = -1;
+var count = 0;
+var popped = 0;
+
+var q = 0;
+var perc = 0;
+
+var c = document.getElementById('c');
+var cx = c.getContext('2d');
+var a = new AudioContext();
+
+function equalMarks(mark, no){
+    marks = [];
+    for(var i = 0; i < no; i++){
+        marks.push(mark);
+    }
+}
+
 function interval(fn, duration){
     this.baseline = undefined
 
@@ -25,27 +51,14 @@ function interval(fn, duration){
     }
 }
 
-// colours
-const C_BACKG = '#222';
-const C_FORE = '#ccc';
-
-var until = 0;
-var int = 10;
-var t0 = -1;
-
-var c = document.getElementById('c');
-var cx = c.getContext('2d');
-
-var a = new AudioContext();
-
-function beep(freq, duration){
+function beep(vol, freq, duration){
     v=a.createOscillator();
     u=a.createGain();
     v.connect(u);
     v.frequency.value=freq;
     v.type="sine";
     u.connect(a.destination);
-    u.gain.value=50*0.01;
+    u.gain.value=vol*0.01;
     v.start(a.currentTime);
     v.stop(a.currentTime+duration*0.001);
 }
@@ -68,8 +81,21 @@ function update(){
     }
 
     if (getTimestamp() >= until){
-        beep(440*2, 1000);
+        beep(50,440*2, 1000);
         until = getTimestamp() + int;
+    }
+
+    // marks stuff
+    if(marks.length>1){
+        if(count>cum_marks[1]){
+            cum_marks.shift();
+            marks.shift();
+            popped += 1;
+        }
+    } else{
+        if (perc>100){
+            beep(20,440*3,100);
+        }
     }
 }
 
@@ -79,7 +105,6 @@ function draw(){
     // draw circle
     cx.strokeStyle = C_FORE;
     cx.fillStyle = C_FORE;
-    cx.lineWidth = 15;
 
     var x = c.width/2;
     var y = c.height/2-50;
@@ -93,6 +118,7 @@ function draw(){
     cx.fill();
 
     // circle outline
+    cx.lineWidth = 15;
     cx.beginPath();
     cx.arc(x,y, r, 0, 2*Math.PI);
     cx.stroke();
@@ -101,11 +127,38 @@ function draw(){
     count = (getTimestamp()-t0)/int;
     cx.font = "40px Arial";
     cx.textAlign = "center";
-    cx.fillText(Number(Math.floor(count*10)/10).toFixed(1), x, y + r + 75);
+    cx.fillText(Number(Math.floor(count*10)/10).toFixed(1), x - c.width/3, y + r + 75);
+
+    // question no
+    q = (count - cum_marks[0])/marks[0] + popped;
+    cx.fillText("Q"+Number(Math.floor(q*10)/10).toFixed(1), x, y + r + 75);
+
+    // test %
+    perc = count/cum_marks[cum_marks.length-1]*100;
+    cx.fillText(Number(Math.floor(perc*10)/10).toFixed(1)+"%", x + c.width/3, y + r + 75);
+
 }
 
 
 (function () {
+    init();
+    function init() {
+        // marks stuff
+        cum_marks = [];
+        cum = marks[0];
+        for(var i = 1; i <= marks.length; i++){
+            cum_marks.push(cum);
+            cum += marks[i];
+        }
+        cum_marks.unshift(0);
+
+        interval(function(){
+            update();
+            draw();
+        }, 1000/60); // 60 fps
+        run();
+    }
+
     function resizeCanvas() {
         c.width = window.innerWidth;
         c.height = window.innerHeight;
@@ -114,13 +167,4 @@ function draw(){
     }
     window.addEventListener('resize', resizeCanvas, false);
     resizeCanvas();
-
-    init();
-    function init() {
-        interval(function(){
-            update();
-            draw();
-        }, 1000/60); // 60 fps
-        run();
-    }
 })();
