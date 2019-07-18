@@ -31,3 +31,5 @@ The timer will beep every interval as defined, with a visual indicator too.<br>
 interval count, question number, percentage of exam complete will also be displayed (in that order)
 
 When the exam has finished (percentage > 100%), there will be a constant ringing sound. The timer however, will continue tracking excess time.
+
+![](screenshot.png)
