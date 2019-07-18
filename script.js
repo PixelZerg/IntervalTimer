@@ -139,7 +139,7 @@ function draw(){
 
 }
 
-function init() {
+function start() {
     // variable init
     until = popped = count = q = perc = 0;
     t0 = -1;
@@ -161,7 +161,7 @@ function init() {
 }
 
 (function () {
-    init();
+    start();
 
     function resizeCanvas() {
         c.width = window.innerWidth;
