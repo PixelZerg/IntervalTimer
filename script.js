@@ -4,14 +4,19 @@ var int = 10;
 // colours
 const C_BACKG = '#222';
 const C_FORE = '#ccc';
+const C_RED = '#e06c75';
 
 var until = 0;
+var minorUntil = 0;
 var t0 = -1;
 var count = 0;
 var popped = 0;
 
 var q = 0;
 var perc = 0;
+var totalMarks = 1;
+var doMarks = true;
+var minors = false;
 
 var c = document.getElementById('c');
 var cx = c.getContext('2d');
@@ -22,6 +27,13 @@ function equalMarks(mark, no){
     for(var i = 0; i < no; i++){
         marks.push(mark);
     }
+}
+
+function exam(totMarks, timeMin){
+    totalMarks = totMarks;
+    int = timeMin*60/totMarks;
+    doMarks = false;
+    start();
 }
 
 function interval(fn, duration){
@@ -85,6 +97,12 @@ function update(){
         until = getTimestamp() + int;
     }
 
+    if(getTimestamp() >= minorUntil){
+        // minor beep
+        beep(20,440*1, 75);
+        minorUntil = getTimestamp() + int/16;
+    }
+
     // marks stuff
     if(marks.length>1){
         if(count>cum_marks[1]){
@@ -108,7 +126,7 @@ function draw(){
 
     var x = c.width/2;
     var y = c.height/2-50;
-    var r = c.height*0.4;
+    var r = Math.min(c.height, c.width) *0.37;
 
     // sector
     cx.lineWidth = 0.1;
@@ -118,7 +136,7 @@ function draw(){
     cx.fill();
 
     // circle outline
-    cx.lineWidth = 15;
+    cx.lineWidth = 0.06*r;
     cx.beginPath();
     cx.arc(x,y, r, 0, 2*Math.PI);
     cx.stroke();
@@ -127,15 +145,28 @@ function draw(){
     count = (getTimestamp()-t0)/int;
     cx.font = "40px Arial";
     cx.textAlign = "center";
-    cx.fillText(Number(Math.floor(count*10)/10).toFixed(1), x - c.width/3, y + r + 75);
+    cx.fillText(Number(Math.floor(count*10)/10).toFixed(1), x - 0.5*r, y + r + 75);
 
-    // question no
-    q = (count - cum_marks[0])/marks[0] + popped;
-    cx.fillText("Q"+Number(Math.floor(q*10)/10).toFixed(1), x, y + r + 75);
+    if (doMarks){
+        // question no
+        q = (count - cum_marks[0])/marks[0] + popped;
+        cx.fillText("Q"+Number(Math.floor(q*10)/10).toFixed(1), x, y + r + 75);
+    }
 
     // test %
-    perc = count/cum_marks[cum_marks.length-1]*100;
-    cx.fillText(Number(Math.floor(perc*10)/10).toFixed(1)+"%", x + c.width/3, y + r + 75);
+    if (doMarks){
+        totalMarks = cum_marks[cum_marks.length-1];
+    }
+    perc = count/totalMarks *100;
+    cx.fillText(Number(Math.floor(perc*10)/10).toFixed(1)+"%", x + 0.5*r, y + r + 75);
+
+    // total perc circle
+    cx.lineWidth = 0.06*r;
+    r += cx.lineWidth;
+    cx.strokeStyle = C_RED;
+    cx.beginPath();
+    cx.arc(x,y, r, -Math.PI/2, -Math.PI/2 + perc/100*2*Math.PI);
+    cx.stroke();
 
 }
 
@@ -161,7 +192,7 @@ function start() {
 }
 
 (function () {
-    start();
+    exam(72,60);
 
     function resizeCanvas() {
         c.width = window.innerWidth;
